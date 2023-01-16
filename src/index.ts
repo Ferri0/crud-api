@@ -3,24 +3,63 @@ dotenv.config();
 
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
 
-const hostname = process.env.SERVER_HOST_NAME || '127.0.0.1';
-const port = +(process.env.SERVER_PORT || 3000);
+import { DataStorage } from './lib/dataStorage/DataStorage';
+import { getUserId } from './services/getUserId';
 
-const users = [];
+import { getAllUsers } from './lib/endpoints/getAllUsers';
+import { getUserByUuid } from './lib/endpoints/getUserByUuid';
+import { createUser } from './lib/endpoints/createUser';
+import { updateUserByUuid } from './lib/endpoints/updateUserByUuid';
+import { deleteUserByUuid } from './lib/endpoints/deleteUserByUuid';
+
+declare global {
+    var DataStorageInstance: DataStorage;
+}
+
+global.DataStorageInstance = new DataStorage();
+
+const hostname = process.env.SERVER_HOST_NAME || '127.0.0.1';
+const port = +(process.env.SERVER_PORT || '3000');
 
 const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-    if (req.url === '/api' && req.method === 'GET') {
-        //response headers
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
-        //set the response
-        res.write('Hi there, This is a Vanilla Node API');
-        //end the response
-        res.end();
-    } else {
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'text/plain');
-        res.end('Hello World');
+    const requestUrl = req.url || '';
+
+    if (req.method === 'GET') {
+        const userId = getUserId(requestUrl);
+
+        if (requestUrl === '/api/users') {
+            getAllUsers(req, res);
+        }
+
+        if (requestUrl.startsWith('/api/users/') && userId) {
+            getUserByUuid(req, res, userId);
+        }
     }
+
+    if (req.method === 'POST') {
+        if (requestUrl === '/api/users') {
+            createUser(req, res);
+        }
+    }
+
+    if (req.method === 'PUT') {
+        const userId = getUserId(requestUrl);
+
+        if (requestUrl.startsWith('/api/users/') && userId) {
+            updateUserByUuid(req, res, userId);
+        }
+    }
+
+    if (req.method === 'DELETE') {
+        const userId = getUserId(requestUrl);
+
+        if (requestUrl.startsWith('/api/users/') && userId) {
+            deleteUserByUuid(req, res, userId);
+        }
+    }
+
+    res.statusCode = 404;
+    res.end('Endpoint not found');
 });
 
 server.listen(port, hostname, () => {
