@@ -22,22 +22,26 @@ const hostname = process.env.SERVER_HOST_NAME || '127.0.0.1';
 const port = +(process.env.SERVER_PORT || '3000');
 
 const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+    let isRequestRecognised = false;
     const requestUrl = req.url || '';
 
     if (req.method === 'GET') {
         const userId = getUserId(requestUrl);
 
         if (requestUrl === '/api/users') {
+            isRequestRecognised = true;
             getAllUsers(req, res);
         }
 
         if (requestUrl.startsWith('/api/users/') && userId) {
+            isRequestRecognised = true;
             getUserByUuid(req, res, userId);
         }
     }
 
     if (req.method === 'POST') {
         if (requestUrl === '/api/users') {
+            isRequestRecognised = true;
             createUser(req, res);
         }
     }
@@ -46,6 +50,7 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
         const userId = getUserId(requestUrl);
 
         if (requestUrl.startsWith('/api/users/') && userId) {
+            isRequestRecognised = true;
             updateUserByUuid(req, res, userId);
         }
     }
@@ -54,12 +59,15 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
         const userId = getUserId(requestUrl);
 
         if (requestUrl.startsWith('/api/users/') && userId) {
+            isRequestRecognised = true;
             deleteUserByUuid(req, res, userId);
         }
     }
 
-    res.statusCode = 404;
-    res.end('Endpoint not found');
+    if (!isRequestRecognised) {
+        res.statusCode = 404;
+        res.end('Endpoint not found');
+    }
 });
 
 server.listen(port, hostname, () => {
