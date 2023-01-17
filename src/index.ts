@@ -21,50 +21,26 @@ global.DataStorageInstance = new DataStorage();
 const hostname = process.env.SERVER_HOST_NAME || '127.0.0.1';
 const port = +(process.env.SERVER_PORT || '3000');
 
-const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-    let isRequestRecognised = false;
+const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const requestUrl = req.url || '';
+    const userId = getUserId(requestUrl);
 
-    if (req.method === 'GET') {
-        const userId = getUserId(requestUrl);
-
-        if (requestUrl === '/api/users') {
-            isRequestRecognised = true;
-            getAllUsers(req, res);
-        }
-
-        if (requestUrl.startsWith('/api/users/') && userId) {
-            isRequestRecognised = true;
-            getUserByUuid(req, res, userId);
-        }
-    }
-
-    if (req.method === 'POST') {
-        if (requestUrl === '/api/users') {
-            isRequestRecognised = true;
-            createUser(req, res);
-        }
-    }
-
-    if (req.method === 'PUT') {
-        const userId = getUserId(requestUrl);
-
-        if (requestUrl.startsWith('/api/users/') && userId) {
-            isRequestRecognised = true;
-            updateUserByUuid(req, res, userId);
-        }
-    }
-
-    if (req.method === 'DELETE') {
-        const userId = getUserId(requestUrl);
-
-        if (requestUrl.startsWith('/api/users/') && userId) {
-            isRequestRecognised = true;
-            deleteUserByUuid(req, res, userId);
-        }
-    }
-
-    if (!isRequestRecognised) {
+    if (req.method === 'GET' && requestUrl === '/api/users') {
+        // GET - /api/users
+        getAllUsers(req, res);
+    } else if (req.method === 'GET' && requestUrl.startsWith('/api/users/') && userId) {
+        // GET - /api/users/${uuid}
+        getUserByUuid(req, res, userId);
+    } else if (req.method === 'POST' && requestUrl === '/api/users') {
+        // POST - /api/users
+        await createUser(req, res);
+    } else if (req.method === 'PUT' && requestUrl.startsWith('/api/users/') && userId) {
+        // PUT - /api/users/${uuid}
+        await updateUserByUuid(req, res, userId);
+    } else if (req.method === 'DELETE' && requestUrl.startsWith('/api/users/') && userId) {
+        // DELETE - /api/users/${uuid}
+        deleteUserByUuid(req, res, userId);
+    } else {
         res.statusCode = 404;
         res.end('Endpoint not found');
     }
