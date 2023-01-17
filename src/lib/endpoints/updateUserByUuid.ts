@@ -2,59 +2,47 @@ import { validate } from 'uuid';
 import { IncomingMessage, ServerResponse } from 'node:http';
 
 import { validateUserData } from '../../services/validateUserData';
+import { getRequestData } from '../../services/getRequestData';
 
 /**
  * Endpoint based on '/api/users/${uuid}' route
  * Accepts PUT requests
  */
-export const updateUserByUuid = (req: IncomingMessage, res: ServerResponse, userId: string) => {
+export const updateUserByUuid = async (
+    req: IncomingMessage,
+    res: ServerResponse,
+    userId: string
+) => {
     try {
         if (validate(userId)) {
-            const userData = DataStorageInstance.getUserById(userId);
+            const isUserExist = !!DataStorageInstance.getUserById(userId);
 
-            if (userData) {
-                const chunks: Uint8Array[] = [];
+            if (isUserExist) {
+                const updatedUserData = await getRequestData(req);
+                const parsedUpdatedUserData = JSON.parse(updatedUserData);
 
-                req.on('data', (chunk) => {
-                    chunks.push(chunk);
-                });
+                if (validateUserData(parsedUpdatedUserData, 'PUT')) {
+                    const updatedRecord = DataStorageInstance.updateUserById(
+                        parsedUpdatedUserData,
+                        userId
+                    );
 
-                req.on('end', () => {
-                    try {
-                        const dataBuffer = Buffer.concat(chunks);
-                        const dataString = dataBuffer.toString();
-                        const reqBody = JSON.parse(dataString);
-
-                        if (validateUserData(reqBody, 'PUT')) {
-                            const updatedRecord = DataStorageInstance.updateUserById(
-                                reqBody,
-                                userId
-                            );
-
-                            res.statusCode = 200;
-                            res.end(updatedRecord);
-                        } else {
-                            res.statusCode = 400;
-                            res.end('Invalid user data provided');
-                        }
-                    } catch (error) {
-                        res.statusCode = 500;
-                        res.end('Invalid user data provided');
-                    }
-                });
+                    res.statusCode = 200;
+                    res.end(updatedRecord);
+                } else {
+                    res.statusCode = 400;
+                    res.end('Invalid user data provided');
+                }
             } else {
                 res.statusCode = 404;
-                throw new Error('User not found');
+                res.end('User not found');
             }
         } else {
             res.statusCode = 400;
-            throw new Error('User ID is not valid');
+            res.end('User ID is not valid');
         }
     } catch (error: any) {
-        if (res.statusCode !== 400 && res.statusCode !== 404) {
-            res.statusCode = 500;
-        }
-
+        res.statusCode = 500;
         res.end(error.message);
     }
 };
