@@ -1,3 +1,7 @@
+/**
+ * Retrieve user uuid from URL string
+ * It is expected that string will have the following format - '/api/users/${uuid}'
+ */
 export const getUserId = (url: string): string | null => {
     let userId = null;
 
