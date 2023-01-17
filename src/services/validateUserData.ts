@@ -1,10 +1,12 @@
 const ALLOWED_KEYS = ['username', 'age', 'hobbies'];
 
 /**
- * Service function, validate user data provided as request body
- * POST requests data should contain all required fields
- * PUT requests data should contain at least one allowed field
- * Not allowed fields are rejected
+ * Validate user data provided as request body
+ * POST requests data should contain all required keys
+ * PUT requests data should contain at least one allowed key
+ *
+ * If data object contains not allowed key - data considered invalid
+ * If key value has wrong type - data considered invalid
  */
 export const validateUserData = (userData: any, reqType: 'POST' | 'PUT'): boolean => {
     let isValid = true;
@@ -13,6 +15,7 @@ export const validateUserData = (userData: any, reqType: 'POST' | 'PUT'): boolea
         const objectEntries = Object.entries(userData);
 
         if (reqType === 'POST' && objectEntries.length !== 3) {
+            // POST request data have 3 required fields
             isValid = false;
         } else {
             objectEntries.forEach(([key, value]) => {
@@ -23,8 +26,12 @@ export const validateUserData = (userData: any, reqType: 'POST' | 'PUT'): boolea
                         isValid = false;
                     } else if (key === 'age' && typeof +value !== 'number') {
                         isValid = false;
-                    } else if (key === 'hobbies' && !Array.isArray(value)) {
-                        isValid = false;
+                    } else if (key === 'hobbies' && Array.isArray(value)) {
+                        const isEveryElementString = value.every((el) => typeof el === 'string');
+
+                        if (!isEveryElementString) {
+                            isValid = false;
+                        }
                     }
                 } else {
                     isValid = false;
